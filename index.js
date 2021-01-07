@@ -17,7 +17,7 @@ function* textChunkIterator(text, max_words = 3)
         const lineEnds = text[i] === '\n'
 
         if (maxWordsFilled || textEnds || lineEnds || nextChordStarts) {
-            if (maxWordsFilled || textEnds || lineEnds) i += 1 // add trailing space
+            if (maxWordsFilled || textEnds ) i += 1 // add trailing space
 
             yield text.substring(begin, i)
             space_counter = 0
@@ -29,6 +29,10 @@ function* textChunkIterator(text, max_words = 3)
 function chunkToObj(chunk) {
     if (chunk.length && chunk[0] === '[') {
         const chord_end = chunk.indexOf(']')
+        if (chord_end === -1) {
+            throw 'Missing closing chord bracket at ' + chunk
+        }
+
         return {
             chordSign: chunk.substring(1, chord_end),
             text: chunk.substring(chord_end + 1)
@@ -43,15 +47,31 @@ function processNewLine(chunk_obj) {
         return chunk_obj
     }
 
-    if (chunk_obj.text[chunk_obj.text.length - 1] === '\n') {
+    if (chunk_obj.text[0] === '\n') {
         return {
             ...chunk_obj,
-            text: chunk_obj.text.substring(0, chunk_obj.text.length - 1),
-            line_end: true
+            text: chunk_obj.text.substring(1, chunk_obj.text.length),
+            line_start: true
         }
     }
 
     return chunk_obj
+}
+
+function processComment(chunk_obj) {
+    if (!chunk_obj.text.length) {
+        return chunk_obj
+    }
+
+    if (chunk_obj.text[0] == '#') {
+        return {
+            ...chunk_obj,
+            text: chunk_obj.text.substring(1, chunk_obj.text.length),
+            comment_start: true
+        }
+    }
+
+    return chunk_obj;
 }
 
 function processSongPart(chunk_obj) {
@@ -105,17 +125,22 @@ function processSongPart(chunk_obj) {
     return chunk_obj;
 }
 
-const text = `1. Ahoj, [C]Dobře to [D]šlape, nám to
+const text = `@předehra: [Cmaj][D]
+1. Ahoj, [C}Dobře to [D]šlape, nám to
 taky hezky pěkně [E]takhle šlape.
 
+#comment
 R: Tohle je refrén silný jak [D]hovado`
 
-const chunks = [...textChunkIterator(text)].map(chunk => processSongPart(processNewLine(chunkToObj(chunk))))
+console.log([...textChunkIterator(text)])
+
+
+const chunks = [...textChunkIterator(text)].map(chunk => processSongPart(processComment(processNewLine(chunkToObj(chunk)))))
 
 const parts = chunks.reduce((parts, chunk) => {
     if (chunk.song_part) {
         return [...parts, {
-            chunks: [chunk],
+            chunks: chunk.text.length ? [chunk] : [],
             type: chunk.song_part.type
         }]
     } else {
@@ -130,7 +155,7 @@ const parts = chunks.reduce((parts, chunk) => {
     }
 }, [])
 
-console.log(parts.map(p => p.chunks))
+// console.log(parts.map(p => p.chunks))
 
 // for (const part of parts) {
 //     console.log(processSongPart(processNewLine(chunkToObj(chunk))))
