@@ -126,8 +126,8 @@ function processSongPart(chunk_obj) {
 }
 
 const text = `@předehra: [Cmaj][D]
-1. Ahoj, [C]Dobře to [D]šlape, nám to
-taky hezky pěkně [E]takhle šlape.
+1. Ahoj, [C]Dobře to [Am]šlape, nám to
+taky hezky pěkně [F]takhle šlape[G][%][%].
 
 2. Ahoj, [%]Dobře to [%]šlape, nám to
 taky hezky pěkně [%]takhle šlape.
@@ -140,6 +140,7 @@ R: Tohle je refrén silný jak [D]hovado`
 
 const chunks = [...textChunkIterator(text)].map(chunk => processSongPart(processComment(processNewLine(chunkToObj(chunk)))))
 
+// group by `song_part`
 const parts = chunks.reduce((parts, chunk) => {
     if (chunk.song_part) {
         return [...parts, {
@@ -160,80 +161,37 @@ const parts = chunks.reduce((parts, chunk) => {
 
 
 function* partChordsIterator(part) {
-    const chordSigns = part.chunks.filter(chunk => chunk.chordSign).map(chunk => chunk.chordSign)
+    const chordSigns = part.chunks.filter(chunk => chunk.chordSign && chunk.chordSign !== '%').map(chunk => chunk.chordSign)
 
-    let i = 0;
-    while (true) {
-        let reset = yield chordSigns[i] // usage: .next(true)
-        if (reset)
-            i = 0
-        else
-            i = (i + 1) % chordSigns.length
+    let lastPartType;
+
+    for (let i = 0; true; i = (i + 1) % chordSigns.length) {
+        let newPartType = yield chordSigns[i]
+        if (lastPartType && lastPartType !== newPartType) i = -1
+        lastPartType = newPartType
     }
 }
 
 function processMirrorChords(parts) {
-    const isNextVerse = part => part.type !== '1' && /\d/.test(part.type)
-    const isFirstVerse = part => part.tpye === '1'
+    const isVerse = part => /\d/.test(part.type)
+    const isFirstVerse = part => part.type === '1'
     const isReplaceChord = chunk => chunk.chordSign === "%"
 
     const firstVerse = parts.filter(isFirstVerse)[0];
 
     if (firstVerse) {
         const iterator = partChordsIterator(firstVerse)
-        return parts.map(p => !isNextVerse(p) ? p : ({
+        return parts.map(p => !isVerse(p) ? p : ({
             type: p.type,
             chunks: p.chunks.map(chunk => !isReplaceChord(chunk) ? chunk :
                 {
                     ...chunk,
-                    chordSign: iterator.next().value
+                    chordSign: iterator.next(p.type).value
                 })
         }))
     }
+
+    return parts;
 }
 
 console.log(processMirrorChords(parts).map(p => p.chunks))
-// console.log([][0])
-
-// for (const part of parts) {
-//     console.log(processSongPart(processNewLine(chunkToObj(chunk))))
-// }
-
-
-// const t2 = `1. sloka 1
-
-// 2. sloka 2
-
-// R: refrén [C]kua`
-
-// function songPartIterator(lyrics, regexprs = {
-//     // prelude: /@předehra:/u,
-//     // interlude: /@mezihra:/u,
-//     // postlude: /@dohra:/u,
-//     // verse: 
-// }) {
-
-//     let sp_lines = []
-
-//     for (const line of lyrics.split('\n')) {
-//         if (separators.some(reg => reg.test(line))) {
-//             // start of a new part
-
-//             yield sp_lines
-//         }
-//     }
-// }
-
-// for (const part of songPartIterator(t2)) {
-//     console.log(part)
-// }
-
-
-// console.log(/@předehra:/u.test('@předehra:'))
-
-// const t = 'one word hello there okay fine'
-
-// console.log(getNextISpaces(t, 0, 6))
-
-// console.log(transposedChord(parseChordSign('C#7maj'), 2))
-// console.log(parseTextPart(text))
