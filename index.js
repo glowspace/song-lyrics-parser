@@ -126,13 +126,16 @@ function processSongPart(chunk_obj) {
 }
 
 const text = `@předehra: [Cmaj][D]
-1. Ahoj, [C}Dobře to [D]šlape, nám to
+1. Ahoj, [C]Dobře to [D]šlape, nám to
 taky hezky pěkně [E]takhle šlape.
+
+2. Ahoj, [%]Dobře to [%]šlape, nám to
+taky hezky pěkně [%]takhle šlape.
 
 #comment
 R: Tohle je refrén silný jak [D]hovado`
 
-console.log([...textChunkIterator(text)])
+// console.log([...textChunkIterator(text)])
 
 
 const chunks = [...textChunkIterator(text)].map(chunk => processSongPart(processComment(processNewLine(chunkToObj(chunk)))))
@@ -155,7 +158,42 @@ const parts = chunks.reduce((parts, chunk) => {
     }
 }, [])
 
-// console.log(parts.map(p => p.chunks))
+
+function* partChordsIterator(part) {
+    const chordSigns = part.chunks.filter(chunk => chunk.chordSign).map(chunk => chunk.chordSign)
+
+    let i = 0;
+    while (true) {
+        let reset = yield chordSigns[i] // usage: .next(true)
+        if (reset)
+            i = 0
+        else
+            i = (i + 1) % chordSigns.length
+    }
+}
+
+function processMirrorChords(parts) {
+    const isNextVerse = part => part.type !== '1' && /\d/.test(part.type)
+    const isFirstVerse = part => part.tpye === '1'
+    const isReplaceChord = chunk => chunk.chordSign === "%"
+
+    const firstVerse = parts.filter(isFirstVerse)[0];
+
+    if (firstVerse) {
+        const iterator = partChordsIterator(firstVerse)
+        return parts.map(p => !isNextVerse(p) ? p : ({
+            type: p.type,
+            chunks: p.chunks.map(chunk => !isReplaceChord(chunk) ? chunk :
+                {
+                    ...chunk,
+                    chordSign: iterator.next().value
+                })
+        }))
+    }
+}
+
+console.log(processMirrorChords(parts).map(p => p.chunks))
+// console.log([][0])
 
 // for (const part of parts) {
 //     console.log(processSongPart(processNewLine(chunkToObj(chunk))))
