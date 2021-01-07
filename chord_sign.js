@@ -1,4 +1,4 @@
-function parseChord(text) {
+function parseChordSign(text) {
     const matches_brackets = text.match(/\(([^\)]+)\)/)
     if (matches_brackets) {
         text = matches_brackets[1]
@@ -50,6 +50,8 @@ function parseChord(text) {
         chord.extension = 's' + chord.extension
     }
 
+    // todo: refactor to not explicitly use accidentals
+
     const normalizeAccidental = note => note ?
         note.replace('is', '#').replace('es', 'b').replace('s', 'b')
         : undefined
@@ -58,7 +60,13 @@ function parseChord(text) {
     chord.baseNoteAcc = normalizeAccidental(chord.baseNoteAcc)
     chord.bassNoteAcc = normalizeAccidental(chord.bassNoteAcc)
 
-    return chord
+    return {
+        base: chord.baseNote + chord.baseNoteAcc,
+        variant: chord.variant,
+        extension: chord.extension,
+        bass: chord.bassNote + chord.bassNoteAcc,
+        optional: chord.optional
+    }
 }
 
-export default parseChord
+export default parseChordSign

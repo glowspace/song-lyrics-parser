@@ -1,4 +1,6 @@
 // requires Node 14 and higher
-import parseChord from './chord.js'
+import parseChordSign from './chord_sign.js'
+import transposedChord from './transpose.js'
 
-console.log(parseChord(''))
+
+console.log(transposedChord(parseChordSign('C#7maj'), 2))
