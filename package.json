@@ -4,7 +4,8 @@
     "main": "index.js",
     "author": "Miroslav Sery",
     "license": "MIT",
+    "type": "module",
     "dependencies": {
-        
+
     }
 }
