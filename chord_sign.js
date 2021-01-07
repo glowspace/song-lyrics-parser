@@ -61,12 +61,14 @@ function parseChordSign(text) {
     chord.bassNoteAcc = normalizeAccidental(chord.bassNoteAcc)
 
     return {
-        base: chord.baseNote + chord.baseNoteAcc,
+        base: chord.baseNote + (chord.baseNoteAcc || ''),
         variant: chord.variant,
         extension: chord.extension,
-        bass: chord.bassNote + chord.bassNoteAcc,
+        bass: chord.bassNote ? chord.bassNote + (chord.bassNoteAcc || '') : undefined,
         optional: chord.optional
     }
 }
 
 export default parseChordSign
+
+// console.log(parseChordSign('C'))
