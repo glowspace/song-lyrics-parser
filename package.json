@@ -1,0 +1,10 @@
+{
+    "name": "song-lyrics-parser",
+    "version": "1.0.0",
+    "main": "index.js",
+    "author": "Miroslav Sery",
+    "license": "MIT",
+    "dependencies": {
+        
+    }
+}
