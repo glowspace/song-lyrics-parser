@@ -158,10 +158,7 @@ function modifiedLast(arr, lastModifier, orDefault={}) {
     const lastOrDefault = arr[arr.length - 1] || orDefault
     return [
         ...arr.splice(0, arr.length - 1),
-        {
-            ...lastOrDefault,
-            ...lastModifier(lastOrDefault)
-        }
+        lastModifier(lastOrDefault)
     ]
 }
 
@@ -173,7 +170,7 @@ function chunksToParts(chunks) {
             type: chunk.song_part.type
         }]
         // add chunk to the last part
-        : modifiedLast(parts, last => ({chunks: [...last.chunks, chunk]}), {chunks:[]})
+        : modifiedLast(parts, lastPart => ({...lastPart, chunks: [...lastPart.chunks, chunk]}), {chunks:[]})
     , [])
 }
 
@@ -186,7 +183,7 @@ function partChunksToLines(chunks) {
             chunks: [chunk]
         }]
         // ELSE modify the last line .. add the current chunk to its chunks
-        : modifiedLast(lines, last => ({chunks: [...last.chunks, chunk]}), {chunks: []})
+        : modifiedLast(lines, lastline => ({...lastline, chunks: [...lastline.chunks, chunk]}), {chunks: []})
     , [])
 }
 
@@ -212,3 +209,4 @@ const parts = processMirrorChords(chunksToParts(chunks)).map(p => ({
 
 
 console.log(JSON.stringify(parts))
+// console.log(JSON.stringify(parts.map(p => p.lines.flatMap(l => l.chunks.filter(ch => ch.chordSign).map(ch => ch.chordSign)))))
