@@ -43,10 +43,6 @@ function chunkToObj(chunk) {
 }
 
 function processNewLine(chunk_obj) {
-    if (!chunk_obj.text.length) {
-        return chunk_obj
-    }
-
     if (chunk_obj.text[0] === '\n') {
         return {
             ...chunk_obj,
@@ -59,10 +55,6 @@ function processNewLine(chunk_obj) {
 }
 
 function processComment(chunk_obj) {
-    if (!chunk_obj.text.length) {
-        return chunk_obj
-    }
-
     if (chunk_obj.text[0] == '#') {
         return {
             ...chunk_obj,
@@ -86,6 +78,7 @@ function processSongPart(chunk_obj) {
         return {
             text: chunk_obj.text.replace(matches_at[0], ''),
             song_part: {
+                // replace known types with symbols (P,M,D)
                 type: types[matches_at[1]] || matches_at[1],
             }
         }
@@ -125,41 +118,6 @@ function processSongPart(chunk_obj) {
     return chunk_obj;
 }
 
-const text = `@předehra: [Cmaj][D]
-1. Ahoj, [C]Dobře to [Am]šlape, nám to
-taky hezky pěkně [F]takhle šlape[G][%][%].
-
-2. Ahoj, [%]Dobře to [%]šlape, nám to
-taky hezky pěkně [%]takhle šlape.
-
-#comment
-R: Tohle je refrén silný jak [D]hovado`
-
-// console.log([...textChunkIterator(text)])
-
-
-const chunks = [...textChunkIterator(text)].map(chunk => processSongPart(processComment(processNewLine(chunkToObj(chunk)))))
-
-// group by `song_part`
-const parts = chunks.reduce((parts, chunk) => {
-    if (chunk.song_part) {
-        return [...parts, {
-            chunks: chunk.text.length ? [chunk] : [],
-            type: chunk.song_part.type
-        }]
-    } else {
-        const last = parts[parts.length - 1] || {chunks: []};
-        return [
-            ...parts.splice(0, parts.length - 1),
-            {
-                ...last,
-                chunks: [...last.chunks, chunk]
-            }
-        ]
-    }
-}, [])
-
-
 function* partChordsIterator(part) {
     const chordSigns = part.chunks.filter(chunk => chunk.chordSign && chunk.chordSign !== '%').map(chunk => chunk.chordSign)
 
@@ -194,4 +152,63 @@ function processMirrorChords(parts) {
     return parts;
 }
 
-console.log(processMirrorChords(parts).map(p => p.chunks))
+// helper function
+// [obj], (obj -> obj), obj -> [obj]
+function modifiedLast(arr, lastModifier, orDefault={}) {
+    const lastOrDefault = arr[arr.length - 1] || orDefault
+    return [
+        ...arr.splice(0, arr.length - 1),
+        {
+            ...lastOrDefault,
+            ...lastModifier(lastOrDefault)
+        }
+    ]
+}
+
+function chunksToParts(chunks) { 
+    return chunks.reduce((parts, chunk) => chunk.song_part ?
+        // chunk is a start of a new part
+        [...parts, {
+            chunks: chunk.text.length ? [chunk] : [],
+            type: chunk.song_part.type
+        }]
+        // add chunk to the last part
+        : modifiedLast(parts, last => ({chunks: [...last.chunks, chunk]}), {chunks:[]})
+    , [])
+}
+
+
+function partChunksToLines(chunks) {
+    return chunks.reduce((lines, chunk) => chunk.line_start ?
+        // chunk is a start of a new line, append a new entry to `lines`
+        [...lines, {
+            comment: chunk.comment_start,
+            chunks: [chunk]
+        }]
+        // ELSE modify the last line .. add the current chunk to its chunks
+        : modifiedLast(lines, last => ({chunks: [...last.chunks, chunk]}), {chunks: []})
+    , [])
+}
+
+
+
+const text = `@předehra: [Cmaj][D]
+1. Ahoj, [C]Dobře to [Am]šlape, nám to
+taky hezky pěkně [F]takhle šlape[G][%][%].
+
+2. Ahoj, [%]Dobře to [%]šlape, nám to
+taky hezky pěkně [%]takhle šlape.
+
+#comment
+R: Tohle je refrén silný jak [D]hovado`
+
+
+const chunks = [...textChunkIterator(text)].map(chunk => processSongPart(processComment(processNewLine(chunkToObj(chunk)))))
+
+const parts = processMirrorChords(chunksToParts(chunks)).map(p => ({
+    type: p.type,
+    lines: partChunksToLines(p.chunks)
+}))
+
+
+console.log(JSON.stringify(parts))
