@@ -183,7 +183,7 @@ function partChunksToLines(chunks) {
             chunks: [chunk]
         }]
         // ELSE modify the last line .. add the current chunk to its chunks
-        : modifiedLast(lines, lastline => ({...lastline, chunks: [...lastline.chunks, chunk]}), {chunks: []})
+        : modifiedLast(lines, lastLine => ({...lastLine, chunks: [...lastLine.chunks, chunk]}), {chunks: []})
     , [])
 }
 
