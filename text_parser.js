@@ -50,6 +50,39 @@ function processNewLine(chunk_obj) {
     return chunk_obj
 }
 
+
+function processInline(chunk_obj) {
+    if (chunk_obj.text[0] == '@') {
+        return {
+            ...chunk_obj,
+            text: chunk_obj.text.substring(1, chunk_obj.text.length),
+            inline_start: true
+        }
+    }
+
+    return chunk_obj;
+}
+
+// depends on processInline
+function createProcessPartAliases(aliases = {
+    'předehra': 'P',
+    'mezihra': 'M',
+    'dohra': 'D'
+}) {
+    return function(chunk_obj) {
+        for (const alias of Object.keys(aliases)) {
+            if (chunk_obj.text.startsWith(alias)) {
+                return {
+                    ...chunk_obj,
+                    text: chunk_obj.text.replace(alias, aliases[alias])
+                }
+            }
+        }
+    
+        return chunk_obj;
+    }
+}
+
 function processComment(chunk_obj) {
     if (chunk_obj.text[0] == '#') {
         return {
@@ -62,25 +95,11 @@ function processComment(chunk_obj) {
     return chunk_obj;
 }
 
-function processSongPart(chunk_obj, known_types = {
-    'předehra': 'P',
-    'mezihra': 'M',
-    'dohra': 'D'
-}) {
-    const matches_at = chunk_obj.text.match(/^\s*@([\u0000-\u0019\u0021-\uFFFF]+):\s*/u)
-    if (matches_at) {
-        return {
-            text: chunk_obj.text.replace(matches_at[0], ''),
-            song_part: {
-                // replace known types with symbols (P,M,D)
-                type: known_types[matches_at[1]] || matches_at[1],
-            }
-        }
-    }
-    
-    const matches_hidden = chunk_obj.text.match(/^\s*\(([RBC]\d?):\)\s*/)
+function processSongPart(chunk_obj) {    
+    const matches_hidden = chunk_obj.text.match(/^\s*\(([A-Z]\d{0,2}):\)\s*/)
     if (matches_hidden) {
         return {
+            ...chunk_obj,
             text: chunk_obj.text.replace(matches_hidden[0], ''),
             song_part: {
                 type: matches_hidden[1],
@@ -89,9 +108,10 @@ function processSongPart(chunk_obj, known_types = {
         }
     }
 
-    const matches = chunk_obj.text.match(/^\s*([RBC]\d?):\s*/)
+    const matches = chunk_obj.text.match(/^\s*([A-Z]\d{0,2}):\s*/)
     if (matches) {
         return {
+            ...chunk_obj,
             text: chunk_obj.text.replace(matches[0], ''),
             song_part: {
                 type: matches[1]
@@ -102,6 +122,7 @@ function processSongPart(chunk_obj, known_types = {
     const matches_verse = chunk_obj.text.match(/^\s*(\d)\.\s*/)
     if (matches_verse) {
         return {
+            ...chunk_obj,
             text: chunk_obj.text.replace(matches_verse[0], ''),
             song_part: {
                 type: matches_verse[1]
@@ -174,6 +195,7 @@ function partChunksToLines(chunks) {
         // chunk is a start of a new line, append a new entry to `lines`
         [...lines, {
             comment: chunk.comment_start,
+            inline: chunk.inline_start,
             chunks: [chunk]
         }]
         // ELSE modify the last line .. add the current chunk to its chunks
@@ -192,3 +214,45 @@ export default function(text) {
 
     return parts
 }
+
+const lyrics = `@předehra: [C][D][Em]
+1. Ahoj, [C]Dobře to [Am]šlape
+to je jízda, že jo.
+# to je komentář
+
+# vstup
+2. [%][%][%][%]
+
+R:
+
+(R:)`
+
+// tests
+
+const chunks = [...textChunkIterator(lyrics)]
+console.log(chunks)
+
+const chunkObjs = chunks.map(chunkToObj)
+console.log(chunkObjs)
+
+const withNewlines = chunkObjs.map(processNewLine)
+console.log(withNewlines)
+
+const withInlines = withNewlines.map(processInline)
+console.log(withInlines)
+
+const processPartAliases = createProcessPartAliases()
+
+const withAliases = withInlines.map(processPartAliases)
+console.log(withAliases)
+
+const withComments = withAliases.map(processComment)
+console.log(withComments)
+
+const withSongParts = withComments.map(processSongPart)
+console.log(withSongParts)
+
+console.log('----- end of chunks ------')
+
+const parts = chunksToParts(withSongParts)
+console.log(parts)
