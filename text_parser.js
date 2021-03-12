@@ -203,6 +203,33 @@ function partChunksToLines(chunks) {
     , [])
 }
 
+// OK, not a functional immutable approach, but way simpler
+function moveLastLineCommentsToNextPart(parts_lines) {
+    //                  do not move anything from the last part
+    for (let i = 0; i < parts_lines.length - 1; i++) {
+        let part = parts_lines[i]
+        let nextPart = parts_lines[i + 1]
+
+        let k = part.lines.length - 1
+        let commentsBuffer = []
+
+        // go from the end and push all the comments to buffer
+        while (k > 0 && part.lines[k].comment) {
+            commentsBuffer.push(part.lines[k])
+            k--
+        }
+
+        if (commentsBuffer.length) {
+            part.lines = part.lines.slice(0, k + 1)
+
+            nextPart.lines = [
+                ...commentsBuffer.reverse(),
+                nextPart.lines
+            ]
+        }
+    }
+}
+
 
 export default function(text) {
     const chunks = [...textChunkIterator(text)].map(chunk => processSongPart(processComment(processNewLine(chunkToObj(chunk)))))
@@ -220,12 +247,15 @@ const lyrics = `@předehra: [C][D][Em]
 to je jízda, že jo.
 # to je komentář
 
+# multiline comment
 # vstup
 2. [%][%][%][%]
 
 R:
 
-(R:)`
+(R:)
+
+#komentar na konec`
 
 // tests
 
@@ -256,3 +286,23 @@ console.log('----- end of chunks ------')
 
 const parts = chunksToParts(withSongParts)
 console.log(parts)
+
+const mirror = processMirrorChords(parts)
+console.log(mirror.map(p => p.chunks).map(chunks => chunks.map(ch => ch.chordSign).filter(sign => sign)))
+
+const partsLines = mirror.map(p => ({
+    type: p.type,
+    lines: partChunksToLines(p.chunks)
+}))
+
+console.log(partsLines.map(p => ({
+    type: p.type,
+    lines: p.lines.map(ch => JSON.stringify(ch))
+})))
+
+moveLastLineCommentsToNextPart(partsLines)
+
+console.log(partsLines.map(p => ({
+    type: p.type,
+    lines: p.lines.map(ch => JSON.stringify(ch))
+})))
