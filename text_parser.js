@@ -219,7 +219,7 @@ function moveLastLineCommentsToNextPart(parts_lines) {
 
         let k = part.lines.length - 1
 
-        // go from the end and push all the comments to buffer
+        // count how many comments from the end do we have
         while (k > 0 && part.lines[k].is_comment) {
             k--
         }
