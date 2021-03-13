@@ -218,22 +218,17 @@ function moveLastLineCommentsToNextPart(parts_lines) {
         let nextPart = parts_lines[i + 1]
 
         let k = part.lines.length - 1
-        let commentsBuffer = []
 
         // go from the end and push all the comments to buffer
         while (k > 0 && part.lines[k].is_comment) {
-            commentsBuffer.push(part.lines[k])
             k--
         }
-
-        if (commentsBuffer.length) {
-            part.lines = part.lines.slice(0, k + 1)
-
-            nextPart.lines = [
-                ...commentsBuffer.reverse(),
-                nextPart.lines
-            ]
-        }
+ 
+        nextPart.lines = [
+            ...part.lines.slice(k + 1, part.lines.length),
+            ...nextPart.lines
+        ]
+        part.lines = part.lines.slice(0, k + 1)
     }
 }
 
