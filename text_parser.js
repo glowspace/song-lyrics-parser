@@ -50,24 +50,11 @@ function processNewLine(chunk_obj) {
     return chunk_obj
 }
 
-
-function processInline(chunk_obj) {
-    if (chunk_obj.text[0] == '@') {
-        return {
-            ...chunk_obj,
-            text: chunk_obj.text.substring(1, chunk_obj.text.length),
-            inline_start: true
-        }
-    }
-
-    return chunk_obj;
-}
-
 // depends on processInline
 function createProcessPartAliases(aliases = {
-    'předehra': 'P',
-    'mezihra': 'M',
-    'dohra': 'D'
+    '@předehra': 'P',
+    '@mezihra': 'M',
+    '@dohra': 'D'
 }) {
     return function(chunk_obj) {
         for (const alias of Object.keys(aliases)) {
@@ -96,37 +83,45 @@ function processComment(chunk_obj) {
 }
 
 function processSongPart(chunk_obj) {    
+    let chunkText;
+
     const matches_hidden = chunk_obj.text.match(/^\s*\(([A-Z]\d{0,2}):\)\s*/)
     if (matches_hidden) {
+        chunkText = chunk_obj.text.replace(matches_hidden[0], '');
         return {
             ...chunk_obj,
-            text: chunk_obj.text.replace(matches_hidden[0], ''),
+            text: chunkText,
             song_part: {
                 type: matches_hidden[1],
-                is_hidden: true
+                is_hidden: true,
+                transpose: chunkText == '' && chunk_obj.chordSign ? chunk_obj.chordSign : false
             }
         }
     }
 
     const matches = chunk_obj.text.match(/^\s*([A-Z]\d{0,2}):\s*/)
     if (matches) {
+        chunkText = chunk_obj.text.replace(matches[0], '');
         return {
             ...chunk_obj,
-            text: chunk_obj.text.replace(matches[0], ''),
+            text: chunkText,
             song_part: {
-                type: matches[1]
+                type: matches[1],
+                transpose: chunkText == '' && chunk_obj.chordSign ? chunk_obj.chordSign : false
             }
         }
     }
 
     const matches_verse = chunk_obj.text.match(/^\s*(\d)\.\s*/)
     if (matches_verse) {
+        chunkText = chunk_obj.text.replace(matches_verse[0], '');
         return {
             ...chunk_obj,
-            text: chunk_obj.text.replace(matches_verse[0], ''),
+            text: chunkText,
             song_part: {
                 type: matches_verse[1],
-                is_hidden: true
+                is_hidden: true,
+                transpose: chunkText == '' && chunk_obj.chordSign ? chunk_obj.chordSign : undefined
             }
         }
     }
@@ -187,9 +182,10 @@ function chunksToParts(chunks) {
     return chunks.reduce((parts, chunk) => chunk.song_part ?
         // chunk is a start of a new part
         [...parts, {
-            chunks: (chunk.text.length || chunk.inline_start) ? [chunk] : [],
+            chunks: chunk.text.length  ? [chunk] : [],
             type: chunk.song_part.type,
-            is_hidden: chunk.song_part.is_hidden === true
+            is_hidden: chunk.song_part.is_hidden === true,
+            transpose: chunk.song_part.transpose
         }]
         // add chunk to the last part
         : modifiedLast(parts, lastPart => ({...lastPart, chunks: [...lastPart.chunks, chunk]}), {chunks:[]})
@@ -202,7 +198,6 @@ function partChunksToLines(chunks) {
         // chunk is a start of a new line, append a new entry to `lines`
         [...lines, {
             is_comment: chunk.comment_start,
-            is_inline: chunk.inline_start === true,
             chunks: [chunk]
         }]
         // ELSE modify the last line .. add the current chunk to its chunks
@@ -233,17 +228,17 @@ function moveLastLineCommentsToNextPart(parts_lines) {
 }
 
 
-// todo: review
-export default function(text) {
-    const chunks = [...textChunkIterator(text)].map(chunk => processSongPart(processComment(processNewLine(chunkToObj(chunk)))))
+// // todo: review
+// export default function(text) {
+//     const chunks = [...textChunkIterator(text)].map(chunk => processSongPart(processComment(processNewLine(chunkToObj(chunk)))))
     
-    const parts = processMirrorChords(chunksToParts(chunks)).map(p => ({
-        type: p.type,
-        lines: partChunksToLines(p.chunks)
-    }))
+//     const parts = processMirrorChords(chunksToParts(chunks)).map(p => ({
+//         type: p.type,
+//         lines: partChunksToLines(p.chunks)
+//     }))
 
-    return parts
-}
+//     return parts
+// }
 
 const lyrics = `@předehra: [C][D][Em]
 1. Ahoj, [C]Dobře to [Am]šlape
@@ -254,9 +249,9 @@ to je jízda, že jo.
 # vstup
 2. [%][%][%][%]
 
-R:
+[F#]R:
 
-(R:)
+[G#](R:)
 
 #komentar na konec`
 
@@ -274,12 +269,9 @@ console.log(withNewlines)
 // fix missing line_start at the very start
 withNewlines[0].line_start = true;
 
-const withInlines = withNewlines.map(processInline)
-console.log(withInlines)
-
 const processPartAliases = createProcessPartAliases()
 
-const withAliases = withInlines.map(processPartAliases)
+const withAliases = withNewlines.map(processPartAliases)
 console.log(withAliases)
 
 const withComments = withAliases.map(processComment)
