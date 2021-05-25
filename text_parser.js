@@ -70,12 +70,35 @@ function createProcessPartAliases(aliases = {
     }
 }
 
+// todo: make inline posible
+// todo: change comment sign
 function processComment(chunk_obj) {
     if (chunk_obj.text[0] == '#') {
         return {
             ...chunk_obj,
             text: chunk_obj.text.substring(1, chunk_obj.text.length),
             comment_start: true
+        }
+    }
+
+    return chunk_obj;
+}
+
+// todo: make inline possible
+function processAlternatives(chunk_obj) {
+    const countStartChars = (text, char) => {
+        let counter = 0;
+        while (counter < text.length && text[counter] == char) counter++;
+        return counter;
+    }
+
+    if (chunk_obj.text[0] == '*') {
+        const countStars = countStartChars(chunk_obj.text, '*')
+
+        return {
+            ...chunk_obj,
+            text: chunk_obj.text.substring(countStars, chunk_obj.text.length),
+            alternative_i: countStars
         }
     }
 
@@ -243,9 +266,9 @@ function moveLastLineCommentsToNextPart(parts_lines) {
 const lyrics = `@předehra: [C][D][Em]
 1. Ahoj, [C]Dobře to [Am]šlape
 to je jízda, že jo.
-# to je komentář
+*nebo taky tohle
+**to je něco
 
-# multiline comment
 # vstup
 2. [%][%][%][%]
 
@@ -277,7 +300,10 @@ console.log(withAliases)
 const withComments = withAliases.map(processComment)
 console.log(withComments)
 
-const withSongParts = withComments.map(processSongPart)
+const withAlternatives = withComments.map(processAlternatives)
+console.log(withAlternatives)
+
+const withSongParts = withAlternatives.map(processSongPart)
 console.log(withSongParts)
 
 console.log('----- end of chunks ------')
