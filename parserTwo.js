@@ -17,13 +17,13 @@ class Parser {
 
     lookahead() {
         this.idx += 1
-        s = this.peek()
+        const s = this.peek()
         this.idx -= 1
         return s
     }
 
     shift() {
-        s = this.peek()
+        const s = this.peek()
         this.idx += 1
         return s
     }
@@ -44,19 +44,19 @@ class Parser {
         if (typeof condition == 'function') {
             return condition(this.peek())
         }
-        return condition.includes(self.peek())
+        return condition.includes(this.peek())
     }
 
     require(condition) {
         if (!this.peek_is(condition)) {
-            this.error = True
+            this.error = true
         }
         this.shift()
     }
 
     require_str(x) {
         while (x.length > 0) {
-            if (this.shift() != rest[0])
+            if (this.shift() != x[0])
                 this.error = true
             x = x.slice(1)
         }
@@ -76,7 +76,7 @@ class Parser {
     }
 
     buffer_once(condition, req) {
-        if (!self.eof() && this.peek_is(condition)) {
+        if (!this.eof() && this.peek_is(condition)) {
             this.buffer += this.shift()
             return true
         }
@@ -88,7 +88,7 @@ class Parser {
     }
 
     flush_buffer() {
-        b = this.buffer
+        const b = this.buffer
         this.buffer = ''
         return b
     }
@@ -150,11 +150,13 @@ class LyricsParser extends Parser {
             this.shift()
         }
 
-        return self.flush_buffer()
+        return this.flush_buffer()
     }
 
     // repeat() with * and **
 }
+
+module.exports = LyricsParser
 
 
 // todo: replace ]) with )] , replace ([ with [(
