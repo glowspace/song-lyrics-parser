@@ -5,7 +5,11 @@
     "author": "Miroslav Sery",
     "license": "MIT",
     "type": "module",
-    "dependencies": {
-
+    "dependencies": {},
+    "devDependencies": {
+        "jest": "^27.4.4"
+    },
+    "scripts": {
+        "test": "jest"
     }
 }
